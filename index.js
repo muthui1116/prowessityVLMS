@@ -22,31 +22,35 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-app.set("trust proxy", 1); // if behind Render or other proxy (only in production)
+if (process.env.NODE_ENV === "production") {
+  app.set("trust proxy", 1); // required on Render for secure cookies
+}
 
 const allowedOrigins = (process.env.FRONTEND_URLS || process.env.FRONTEND_URL || "http://localhost:5173")
   .split(",").map(s => s.trim()).filter(Boolean);
 
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin) return cb(null, true); // allow server-to-server
+    if (!origin) return cb(null, true); // allow non-browser requests
     if (allowedOrigins.includes(origin)) return cb(null, true);
     return cb(new Error("CORS origin not allowed"), false);
   },
-  credentials: true
+  credentials: true,
+  methods: ["GET","POST","PUT","DELETE","OPTIONS"],
+  allowedHeaders: ["Content-Type","Authorization","X-Requested-With","Accept"]
 }));
 
 const PgSession = pgSession(session);
 app.use(session({
   store: new PgSession({ pool: db, tableName: "session", createTableIfMissing: true }),
-  secret: process.env.SESSION_SECRET || "dev",
+  secret: process.env.SESSION_SECRET || "dev-secret",
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: process.env.NODE_ENV === "production",             // must be true on HTTPS production
+    secure: process.env.NODE_ENV === "production",
     httpOnly: true,
     sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
-    maxAge: 1000 * 60 * 60 * 24
+    maxAge: 24 * 60 * 60 * 1000
   }
 }));
 
