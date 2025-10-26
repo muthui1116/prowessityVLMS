@@ -2,10 +2,10 @@
   "name": "pern-starter-backend",
   "version": "1.0.0",
  "type": "module",
-  "main": "src/index.js",
+  "main": "index.js",
   "scripts": {
-    "start": "node src/index.js",
-    "dev": "nodemon --watch src --exec node src/index.js"
+    "start": "node index.js",
+    "dev": "nodemon --watch src --exec node index.js"
   },
   "dependencies": {
     "bcrypt": "^5.1.0",

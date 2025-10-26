@@ -1,5 +1,5 @@
 import express from "express";
-import { ensureAuthenticated, requireRole } from "../middleware/roles.js";
+import { ensureAuthenticated, requireRole } from "../src/middleware/roles.js";
 import { query } from "../db.js";
 import { upload } from "../upload.js";
 
