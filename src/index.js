@@ -17,17 +17,12 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 4000;
 
-// If behind proxy (Render) enable trust proxy so secure cookies work
-if (process.env.NODE_ENV === "production") {
-  app.set("trust proxy", 1);
-}
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Build allowed origins from env: FRONTEND_URL or FRONTEND_URLS (comma separated)
-// Default to local dev origin for developer convenience
+
+// Build allowed origins from env var (comma separated). Default keeps local dev allowed.
 const allowedOrigins = (process.env.FRONTEND_URLS || process.env.FRONTEND_URL || "http://localhost:5173")
   .split(",")
   .map((s) => s.trim())
@@ -36,10 +31,10 @@ const allowedOrigins = (process.env.FRONTEND_URLS || process.env.FRONTEND_URL ||
 app.use(
   cors({
     origin: (origin, callback) => {
-      // allow requests with no origin (like server-to-server or curl)
+      // allow non-browser requests (curl, server-to-server) which have no origin
       if (!origin) return callback(null, true);
-      if (allowedOrigins.indexOf(origin) !== -1) return callback(null, true);
-      return callback(new Error("CORS: Origin not allowed"), false);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      return callback(new Error("CORS: origin not allowed"), false);
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
@@ -47,22 +42,18 @@ app.use(
   })
 );
 
-// session store
+// Session store (connect-pg-simple)
 const PgSession = pgSession(session);
 app.use(
   session({
-    store: new PgSession({
-      pool: db, // Postgres pool from src/db.js
-      tableName: "session",
-      createTableIfMissing: true
-    }),
+    store: new PgSession({ pool: db, tableName: "session", createTableIfMissing: true }),
     secret: process.env.SESSION_SECRET || "dev-secret",
     resave: false,
     saveUninitialized: false,
     cookie: {
-      secure: process.env.NODE_ENV === "production", // secure cookies in production (HTTPS)
+      secure: process.env.NODE_ENV === "production",             // true on prod (HTTPS)
       httpOnly: true,
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // allow cross-site in prod
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // none required for cross-site cookies
       maxAge: 1000 * 60 * 60 * 24
     }
   })
