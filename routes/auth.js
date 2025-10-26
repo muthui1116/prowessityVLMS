@@ -1,6 +1,6 @@
 import express from "express";
 import bcrypt from "bcrypt";
-import passport from "../src/auth/passport.js";
+import passport from "../auth/passport.js";
 import { query } from "../db.js";
 import dotenv from "dotenv";
 dotenv.config();
