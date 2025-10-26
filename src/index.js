@@ -17,45 +17,29 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 4000;
 
+// Middlewares
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-
-// Build allowed origins from env var (comma separated). Default keeps local dev allowed.
-const allowedOrigins = (process.env.FRONTEND_URLS || process.env.FRONTEND_URL || "http://localhost:5173")
-  .split(",")
-  .map((s) => s.trim())
-  .filter(Boolean);
-
 app.use(
   cors({
-    origin: (origin, callback) => {
-      // allow non-browser requests (curl, server-to-server) which have no origin
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      return callback(new Error("CORS: origin not allowed"), false);
-    },
-    credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept"]
+    origin: process.env.FRONTEND_URL || "http://localhost:5173",
+    credentials: true
   })
 );
 
-// Session store (connect-pg-simple)
 const PgSession = pgSession(session);
 app.use(
   session({
-    store: new PgSession({ pool: db, tableName: "session", createTableIfMissing: true }),
+    store: new PgSession({
+      pool: db, // Connection pool
+      tableName: "session"
+    }),
     secret: process.env.SESSION_SECRET || "dev-secret",
     resave: false,
     saveUninitialized: false,
-    cookie: {
-      secure: process.env.NODE_ENV === "production",             // true on prod (HTTPS)
-      httpOnly: true,
-      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax", // none required for cross-site cookies
-      maxAge: 1000 * 60 * 60 * 24
-    }
+    cookie: { secure: false, httpOnly: true, maxAge: 1000 * 60 * 60 * 24 } // 1 day
   })
 );
 
@@ -63,7 +47,7 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
-// Routes...
+// Routes
 app.use("/auth", authRoutes);
 app.use("/admin", adminRoutes);
 app.use("/instructor", instructorRoutes);
@@ -72,6 +56,7 @@ app.use("/learner", learnerRoutes);
 // Serve uploads statically (for dev)
 app.use("/uploads", express.static(path.resolve(process.env.UPLOAD_DIR || "./uploads")));
 
+// Health
 app.get("/", (req, res) => res.json({ ok: true }));
 
 app.listen(PORT, () => {
