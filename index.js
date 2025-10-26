@@ -3,12 +3,12 @@ import session from "express-session";
 import pgSession from "connect-pg-simple";
 import dotenv from "dotenv";
 import cors from "cors";
-import passport from "../auth/passport.js";
-import authRoutes from "../routes/auth.js";
-import adminRoutes from "../routes/admin.js";
-import instructorRoutes from "../routes/instructor.js";
-import learnerRoutes from "../routes/learner.js";
-import db from "../db.js";
+import passport from "./auth/passport.js";
+import authRoutes from "./routes/auth.js";
+import adminRoutes from "./routes/admin.js";
+import instructorRoutes from "./routes/instructor.js";
+import learnerRoutes from "./routes/learner.js";
+import db from "./db.js";
 import cookieParser from "cookie-parser";
 import path from "path";
 
