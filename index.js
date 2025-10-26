@@ -16,6 +16,13 @@ dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 4000;
+const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+const isProduction = process.env.NODE_ENV === "production" || FRONTEND_URL.startsWith("https://");
+
+// Trust proxy when running behind Render / other proxies so secure cookies and req.protocol work
+if (isProduction) {
+  app.set("trust proxy", 1);
+}
 
 // Middlewares
 app.use(express.json());
@@ -24,8 +31,9 @@ app.use(cookieParser());
 
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
-    credentials: true
+    origin: FRONTEND_URL,
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
   })
 );
 
@@ -33,13 +41,19 @@ const PgSession = pgSession(session);
 app.use(
   session({
     store: new PgSession({
-      pool: db, // Connection pool
+      pool: db, // connection pool
       tableName: "session"
     }),
+    name: "sid", // short cookie name
     secret: process.env.SESSION_SECRET || "dev-secret",
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: false, httpOnly: true, maxAge: 1000 * 60 * 60 * 24 } // 1 day
+    cookie: {
+      httpOnly: true,
+      secure: isProduction, // true on HTTPS (Render)
+      sameSite: isProduction ? "none" : "lax",
+      maxAge: 1000 * 60 * 60 * 24 // 1 day
+    }
   })
 );
 
@@ -53,7 +67,7 @@ app.use("/admin", adminRoutes);
 app.use("/instructor", instructorRoutes);
 app.use("/learner", learnerRoutes);
 
-// Serve uploads statically (for dev)
+// Serve uploads statically (for dev). On Render use S3 for persistence.
 app.use("/uploads", express.static(path.resolve(process.env.UPLOAD_DIR || "./uploads")));
 
 // Health

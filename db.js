@@ -4,10 +4,13 @@ dotenv.config();
 
 const { Pool } = pg;
 
+// If you deploy to Neon, enable SSL with rejectUnauthorized:false
+// Use an env var to control enabling SSL in production
+const enableSsl = process.env.DB_SSL === "true" || (process.env.DATABASE_URL && process.env.DATABASE_URL.includes("neon"));
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  // For Neon deployment you might need:
-  ssl: { rejectUnauthorized: false }
+  ...(enableSsl ? { ssl: { rejectUnauthorized: false } } : {})
 });
 
 export const query = (text, params) => pool.query(text, params);
